@@ -25,11 +25,6 @@ android {
             java.srcDirs(
                 "../chrome/android/java/src/org/chromium/chrome/browser/satellitespace"
             )
-            // Exclude documentation-only patch reference files
-            // (contain Unicode box-drawing chars that javac can't compile)
-            exclude("**/TabSatelliteSpacePatch.java")
-            exclude("**/TabBuilderSatelliteSpacePatch.java")
-            exclude("**/TabInterfacePatch.java")
             res.srcDirs(
                 "../chrome/android/res"
             )
@@ -39,6 +34,15 @@ android {
 
     lint {
         abortOnError = false
+    }
+}
+
+// Exclude documentation-only patch files that contain Unicode chars javac can't handle
+project.afterEvaluate {
+    tasks.withType<JavaCompile>().configureEach {
+        exclude("**/TabSatelliteSpacePatch.java")
+        exclude("**/TabBuilderSatelliteSpacePatch.java")
+        exclude("**/TabInterfacePatch.java")
     }
 }
 
