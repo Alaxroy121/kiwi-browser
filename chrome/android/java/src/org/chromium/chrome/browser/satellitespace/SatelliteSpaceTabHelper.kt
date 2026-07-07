@@ -58,6 +58,7 @@ class SatelliteSpaceTabHelper(
      * @param windowAndroid The WindowAndroid for profile resolution.
      * @return The appropriate Chromium Profile.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun getProfileForTab(
         context: Context,
         tabId: Int,
