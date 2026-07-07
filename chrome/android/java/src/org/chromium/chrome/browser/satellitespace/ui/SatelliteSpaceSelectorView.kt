@@ -159,7 +159,7 @@ class SatelliteSpaceSelectorView @JvmOverloads constructor(
         private fun createChipView(context: Context): LinearLayout {
             return LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(dpToPx(context, 12), dpToPx(context, 6), dpToPx(12), dpToPx(6))
+                setPadding(dpToPx(context, 12), dpToPx(context, 6), dpToPx(context, 12), dpToPx(context, 6))
                 val lp = RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.WRAP_CONTENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
@@ -199,6 +199,12 @@ class SatelliteSpaceSelectorView @JvmOverloads constructor(
                     }
                 }
                 chip.background = bg
+            }
+
+            companion object {
+                private fun dpToPx(context: Context, dp: Int): Int {
+                    return (dp * context.resources.displayMetrics.density).toInt()
+                }
             }
 
             private fun adjustAlpha(@ColorInt color: Int, factor: Float): Int {
