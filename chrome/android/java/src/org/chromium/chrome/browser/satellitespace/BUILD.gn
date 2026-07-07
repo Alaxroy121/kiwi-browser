@@ -1,0 +1,43 @@
+# Copyright 2024 The Kiwi Browser Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/android/rules.gni")
+import("//chrome/android/features/android_internal_rules.gni")
+
+android_library("satellitespace_java") {
+  sources = [
+    "SatelliteSpace.kt",
+    "SatelliteSpaceManager.kt",
+    "SatelliteSpacePreferences.kt",
+    "SatelliteSpaceTabHelper.kt",
+  ]
+
+  deps = [
+    "//base:base_java",
+    "//chrome/android/java/src/org/chromium/chrome/browser/profiles:profiles_java",
+    "//chrome/android/java/src/org/chromium/chrome/browser/tab:tab_java",
+    "//content/public/android:content_java",
+    "//ui/android:ui_java",
+  ]
+
+  # Kotlin support
+  kotlinc_options = "default"
+}
+
+android_library("satellitespace_ui_java") {
+  sources = [
+    "ui/CreateSatelliteSpaceDialog.kt",
+    "ui/SatelliteSpaceManagerActivity.kt",
+    "ui/SatelliteSpaceSelectorView.kt",
+    "ui/SatelliteSpaceTabSwitcherDecorator.kt",
+  ]
+
+  deps = [
+    ":satellitespace_java",
+    "//base:base_java",
+    "//chrome/android/java/src/org/chromium/chrome/browser/tab:tab_java",
+    "//ui/android:ui_java",
+    "//third_party/androidx:recyclerview_recyclerview_java",
+  ]
+}

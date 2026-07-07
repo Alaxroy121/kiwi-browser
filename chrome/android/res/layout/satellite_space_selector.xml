@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Layout for the Satellite Space selector bar.
+  Include this in your tab switcher layout above the tab grid/list.
+
+  Usage in tab_switcher.xml:
+  <include layout="@layout/satellite_space_selector"
+           android:id="@+id/satellite_space_selector_container" />
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/satellite_space_selector"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FF1A1A1A"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- Space chips container (horizontal scroll) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/satellite_space_chip_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:orientation="horizontal" />
+
+    <!-- "Manage Spaces" button -->
+    <TextView
+        android:id="@+id/satellite_space_manage_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:text="+ New Space"
+        android:textColor="#FF90CAF9"
+        android:textSize="12sp"
+        android:padding="4dp" />
+
+</LinearLayout>

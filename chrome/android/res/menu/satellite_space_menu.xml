@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Menu items for Satellite Space management.
+  Include these in your main menu or overflow menu.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_create_satellite_space"
+        android:title="🛰️ New Satellite Space"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_manage_satellite_spaces"
+        android:title="🛰️ Manage Spaces"
+        android:orderInCategory="101"
+        app:showAsAction="never" />
+
+</menu>
