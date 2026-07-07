@@ -8,6 +8,7 @@ package org.chromium.chrome.browser.satellitespace
 
 import android.content.Context
 import org.chromium.base.ThreadUtils
+import org.chromium.base.annotations.VisibleForTesting
 import org.chromium.chrome.browser.profiles.Profile
 import org.chromium.chrome.browser.profiles.ProfileManager
 

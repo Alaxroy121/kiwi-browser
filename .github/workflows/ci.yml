@@ -1,4 +1,4 @@
-name: CI Build
+name: Android CI Build
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -21,8 +21,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android build tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -34,39 +40,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Cache Kotlin build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.konan
-            **/build/classes
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('**/*.kt') }}
-          restore-keys: |
-            ${{ runner.os }}-kotlin-
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew || true
 
-      - name: Lint Satellite Space Kotlin files
+      - name: Generate Gradle wrapper
         run: |
-          echo "=== Linting Satellite Space source files ==="
-          find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \
-            -name "*.kt" -o -name "*.java" | while read f; do
-              echo "Checking: $f"
-              # Basic syntax validation
-              python3 -c "
-          import re, sys
-          with open('$f') as fh:
-              content = fh.read()
-          # Check for unmatched braces
-          opens = content.count('{')
-          closes = content.count('}')
-          if opens != closes:
-              print(f'  WARNING: Unmatched braces ({opens} open, {closes} close)')
-          else:
-              print(f'  OK: Braces balanced')
-          "
-            done
+          if [ ! -f gradlew ]; then
+            echo "Generating Gradle wrapper..."
+            gradle wrapper --gradle-version 8.5
+          fi
+          chmod +x gradlew
+
+      # ── Verification Steps ──────────────────────────────────
 
       - name: Verify file structure
         run: |
@@ -92,43 +77,90 @@ jobs:
             fi
           done
           if [ "$ALL_FOUND" = false ]; then
-            echo "ERROR: Required files are missing!"
+            echo "ERROR: Required files missing!"
             exit 1
           fi
           echo "=== All required files present ==="
 
-      - name: Count source lines
+      - name: Lint — brace matching
         run: |
-          echo "=== Satellite Space code stats ==="
+          echo "=== Brace matching ==="
+          ERRORS=0
           find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \
-            \( -name "*.kt" -o -name "*.java" \) -exec cat {} + | wc -l
-          echo "lines of Kotlin/Java code"
-          echo ""
-          find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \
-            \( -name "*.kt" -o -name "*.java" \) | wc -l
-          echo "source files"
+            \( -name "*.kt" -o -name "*.java" \) | while read f; do
+              OPENS=$(grep -o '{' "$f" | wc -l)
+              CLOSES=$(grep -o '}' "$f" | wc -l)
+              if [ "$OPENS" -ne "$CLOSES" ]; then
+                echo "  ✗ $f  ($OPENS open, $CLOSES close)"
+                ERRORS=$((ERRORS+1))
+              else
+                echo "  ✓ $f"
+              fi
+            done
 
-      - name: Check Kotlin compilation (syntax only)
+      # ── Gradle Build ────────────────────────────────────────
+
+      - name: Build — compile Kotlin/Java
         run: |
-          echo "=== Kotlin syntax check ==="
-          if command -v kotlinc &> /dev/null; then
-            find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \
-              -name "*.kt" -exec kotlinc -no-jdk -no-stdlib {} + 2>&1 || true
-          else
-            echo "kotlinc not available — skipping compilation check"
-            echo "Install kotlin compiler for full syntax validation"
-          fi
+          echo "=== Running Gradle build ==="
+          ./gradlew :satellitespace:compileDebugKotlin :satellitespace:compileDebugJavaWithJavac --no-daemon --stacktrace 2>&1
 
-      - name: Generate build summary
+      - name: Build — assemble debug AAR
+        run: |
+          echo "=== Assembling debug AAR ==="
+          ./gradlew :satellitespace:assembleDebug --no-daemon --stacktrace 2>&1
+
+      - name: Build — run lint
+        run: |
+          echo "=== Running Android lint ==="
+          ./gradlew :satellitespace:lintDebug --no-daemon 2>&1 || true
+
+      # ── Artifacts ───────────────────────────────────────────
+
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: satellite-space-aar
+          path: satellitespace/build/outputs/aar/*.aar
+          retention-days: 14
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: satellitespace/build/reports/lint-results-debug.html
+          retention-days: 14
+
+      # ── Summary ─────────────────────────────────────────────
+
+      - name: Build summary
         if: always()
         run: |
-          echo "## 🛰️ Satellite Space CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛰️ Satellite Space Android CI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| File structure | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| Brace matching | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| Source files | $(find chrome/android/java/src/org/chromium/chrome/browser/satellitespace -name '*.kt' -o -name '*.java' | wc -l) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Total lines | $(find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \( -name '*.kt' -o -name '*.java' \) -exec cat {} + | wc -l) |" >> $GITHUB_STEP_SUMMARY
+
+          # Check build outputs
+          AAR_COUNT=$(find satellitespace/build/outputs/aar -name "*.aar" 2>/dev/null | wc -l)
+          KT_COUNT=$(find chrome/android/java/src/org/chromium/chrome/browser/satellitespace -name "*.kt" | wc -l)
+          LINE_COUNT=$(find chrome/android/java/src/org/chromium/chrome/browser/satellitespace \( -name "*.kt" -o -name "*.java" \) -exec cat {} + | wc -l)
+
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Kotlin files | $KT_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total source lines | $LINE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| AAR outputs | $AAR_COUNT |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See [SATELLITE_SPACE_INTEGRATION.md](SATELLITE_SPACE_INTEGRATION.md) for integration instructions." >> $GITHUB_STEP_SUMMARY
+
+          if [ "$AAR_COUNT" -gt 0 ]; then
+            echo "### ✅ Build succeeded" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "AAR artifact uploaded. Download from **Actions → Artifacts**." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Build failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the build logs above for errors." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [SATELLITE_SPACE_INTEGRATION.md](SATELLITE_SPACE_INTEGRATION.md) for integration guide." >> $GITHUB_STEP_SUMMARY

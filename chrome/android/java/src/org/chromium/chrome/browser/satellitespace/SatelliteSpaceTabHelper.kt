@@ -10,9 +10,6 @@ import android.content.Context
 import org.chromium.base.Log
 import org.chromium.chrome.browser.profiles.Profile
 import org.chromium.chrome.browser.tab.Tab
-import org.chromium.chrome.browser.tab.TabObserver
-import org.chromium.chrome.browser.tab.state.CriticalPersistedTabData
-import org.chromium.content_public.browser.WebContents
 
 /**
  * Helper that binds [Tab] instances to Satellite Spaces.
